@@ -1,0 +1,88 @@
+pypdf
+openai
+pinecone
+dotenv
+
+3️⃣ Business & Finance
+
+Accountant
+
+Business Analyst
+
+Digital Marketer
+
+Human Resources (HR)
+
+Financial Planner
+
+4️⃣ Creative & Media
+
+Graphic Designer
+
+UX/UI Designer
+
+Content Creator / Social Media
+
+Animator
+
+Photographer
+
+5️⃣ Skilled Trades
+
+Mechanic
+
+Electrician
+
+Plumber
+
+Welding Technician
+
+HVAC Technician
+
+6️⃣ Education & Research
+
+School Teacher
+
+Educational Counsellor
+
+Research Assistant
+
+Librarian
+
+7️⃣ Government & Public Services
+
+Police Officer
+
+Defence / Army Career
+
+Civil Services (e.g., administrative officer)
+
+Firefighter
+
+8️⃣ Services & Hospitality
+
+Hotel Manager
+
+Travel & Tourism Specialist
+
+Chef
+
+Event Planner
+
+9️⃣ Agriculture & Environment
+
+Farmer
+
+Agricultural Technician
+
+Horticulturist
+
+Animal Husbandry Specialist
+
+🔟 Sales & Marketing
+
+Sales Executive
+
+Customer Support Specialist
+
+Retail Manager
