@@ -1,68 +1,43 @@
-import { useState, useEffect, useRef } from "react";
-import ReactMarkdown from "react-markdown";
+import { useState, useRef, useEffect } from "react";
 
 function CareerChatbot() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const chatEndRef = useRef(null);
 
-  const bottomRef = useRef(null);
-  const inputRef = useRef(null);
-
-  /* Typing animation + fade-in */
+  // Auto-scroll to latest message
   useEffect(() => {
-    const style = document.createElement("style");
-    style.innerHTML = `
-      @keyframes blink {
-        0% { opacity: 0.2; }
-        20% { opacity: 1; }
-        100% { opacity: 0.2; }
-      }
-      @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(8px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-    `;
-    document.head.appendChild(style);
-    return () => document.head.removeChild(style);
-  }, []);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
-
-  useEffect(() => {
-    if (!loading) inputRef.current?.focus();
-  }, [loading]);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const sendMessage = async () => {
-    if (!input.trim() || loading) return;
+    if (!input.trim()) return;
 
-    setMessages((prev) => [...prev, { role: "user", content: input }]);
+    const userMessage = { role: "user", content: input };
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:8000/chat", {
+      const response = await fetch("http://localhost:8000/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: input })
       });
 
-      const data = await res.json();
+      const data = await response.json();
 
+      const aiMessage = {
+        role: "assistant",
+        content: data.answer
+      };
+
+      setMessages((prev) => [...prev, aiMessage]);
+    } catch (err) {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: data.answer }
-      ]);
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "⚠️ Unable to connect to server." }
+        { role: "assistant", content: "⚠️ Error connecting to AI service." }
       ]);
     } finally {
       setLoading(false);
@@ -70,287 +45,112 @@ function CareerChatbot() {
   };
 
   return (
-    <div style={styles.page}>
+    <div style={styles.wrapper}>
+      <div style={styles.header}>AI Career Assistant</div>
+
       <div style={styles.chatBox}>
-        {/* HEADER */}
-        <div style={styles.header}>
-          <div style={styles.title}>✨ CareerGPT</div>
-          <div style={styles.subtitle}>
-            Your AI-Powered Career Companion
+        {messages.map((msg, index) => (
+          <div
+            key={index}
+            style={{
+              ...styles.message,
+              ...(msg.role === "user"
+                ? styles.userMessage
+                : styles.aiMessage)
+            }}
+          >
+            {msg.content}
           </div>
-        </div>
+        ))}
 
-        {/* CHAT AREA */}
-        <div style={styles.messages}>
-          {/* EMPTY STATE */}
-          {messages.length === 0 && !loading && (
-            <div style={styles.emptyState}>
-              <h2 style={styles.emptyTitle}>
-                🚀 Discover Your Career Path
-              </h2>
+        {loading && (
+          <div style={{ ...styles.message, ...styles.aiMessage }}>
+            Thinking...
+          </div>
+        )}
 
-              <p style={styles.emptySubtitle}>
-                Not sure what to do next?
-                <br />
-                Tell us about your interests and strengths — we’ll help you
-                explore the right career options.
-              </p>
-
-              <ul style={styles.emptyList}>
-                <li>🎓 Career options after <b>10th, 12th, or Graduation</b></li>
-                <li>🧭 Step-by-step <b>roadmaps</b> for different professions</li>
-                <li>🛠️ Skills, qualifications, and <b>time required</b></li>
-                <li>💼 Practical guidance based on <b>real career paths</b></li>
-              </ul>
-
-              <p style={styles.emptyFooter}>
-                Start by asking something simple like:
-                <br />
-                <em>“What career options suit my skills?”</em>
-              </p>
-            </div>
-          )}
-
-          {/* CHAT MESSAGES */}
-          {messages.map((msg, i) => (
-            <div
-              key={i}
-              style={{
-                ...styles.message,
-                alignSelf:
-                  msg.role === "user" ? "flex-end" : "flex-start",
-                backgroundColor:
-                  msg.role === "user" ? "#2563eb" : "#262626"
-              }}
-            >
-              {msg.role === "assistant" ? (
-                <ReactMarkdown>{msg.content}</ReactMarkdown>
-              ) : (
-                msg.content
-              )}
-            </div>
-          ))}
-
-          {/* THINKING */}
-          {loading && (
-            <div style={styles.thinkingBubble}>
-              <TypingDots />
-            </div>
-          )}
-
-          <div ref={bottomRef} />
-        </div>
+        <div ref={chatEndRef} />
       </div>
 
-      {/* INPUT */}
-      <div style={styles.inputWrapper}>
-        <div style={styles.inputContainer}>
-          <textarea
-            ref={inputRef}
-            value={input}
-            disabled={loading}
-            rows={1}
-            placeholder={
-              loading
-                ? "AI is responding..."
-                : "Ask anything about careers…"
-            }
-            style={styles.input}
-            onChange={(e) => {
-              if (loading) return;
-              setInput(e.target.value);
-              e.target.style.height = "auto";
-              e.target.style.height =
-                Math.min(e.target.scrollHeight, 160) + "px";
-            }}
-            onKeyDown={(e) => {
-              if (loading) return;
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-          />
-
-          <button
-            onClick={sendMessage}
-            disabled={loading}
-            style={styles.sendBtn}
-          >
-            ➤
-          </button>
-        </div>
+      <div style={styles.inputArea}>
+        <textarea
+          placeholder="Ask a career-related question..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          style={styles.input}
+          rows={2}
+        />
+        <button onClick={sendMessage} style={styles.sendButton}>
+          Send
+        </button>
       </div>
     </div>
   );
 }
 
-/* Typing dots */
-function TypingDots() {
-  return (
-    <span style={{ display: "inline-flex", gap: "6px", fontSize: "22px" }}>
-      <span style={dotStyle(0)}>.</span>
-      <span style={dotStyle(0.2)}>.</span>
-      <span style={dotStyle(0.4)}>.</span>
-    </span>
-  );
-}
-
-const dotStyle = (delay) => ({
-  animation: "blink 1.4s infinite both",
-  animationDelay: `${delay}s`
-});
-
 const styles = {
-  page: {
-    height: "100vh",
-    backgroundColor: "#1b1b1b",
+  wrapper: {
+    width: "70%",
+    height: "80vh",
+    margin: "30px auto",
     display: "flex",
     flexDirection: "column",
-    alignItems: "center",
+    border: "1px solid #ddd",
+    borderRadius: "12px",
     overflow: "hidden",
-    fontFamily: "system-ui"
+    fontFamily: "Arial, sans-serif"
   },
-
-  chatBox: {
-    width: "1295px",
-    flexGrow: 1,
-    marginTop: "90px",
-    backgroundColor: "#202020",
-    borderRadius: "14px",
-    border: "1px solid #333",
-    display: "flex",
-    flexDirection: "column",
-    overflow: "hidden"
-  },
-
   header: {
-    padding: "18px",
-    textAlign: "center",
-    borderBottom: "1px solid #333",
-    background: "linear-gradient(180deg, #202020, #1b1b1b)"
+    padding: "15px",
+    fontWeight: "bold",
+    borderBottom: "1px solid #ddd",
+    backgroundColor: "#f5f5f5"
   },
-
-  title: {
-    fontSize: "26px",
-    fontWeight: "700",
-    background: "linear-gradient(90deg, #60a5fa, #a78bfa)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent"
-  },
-
-  subtitle: {
-    marginTop: "6px",
-    fontSize: "13px",
-    color: "#b5b5b5"
-  },
-
-  messages: {
-    flexGrow: 1,
+  chatBox: {
+    flex: 1,
     padding: "20px",
     overflowY: "auto",
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px"
+    backgroundColor: "#fafafa"
   },
-
   message: {
-    maxWidth: "75%",
-    padding: "12px 16px",
-    borderRadius: "12px",
-    color: "#eaeaea",
-    lineHeight: "1.6"
-  },
-
-  thinkingBubble: {
-    backgroundColor: "#262626",
-    padding: "8px 12px",
+    maxWidth: "70%",
+    padding: "12px 15px",
     borderRadius: "10px",
-    width: "fit-content",
-    color: "#ccc"
+    marginBottom: "12px",
+    lineHeight: "1.5",
+    whiteSpace: "pre-wrap"
   },
-
-  /* EMPTY STATE */
-  emptyState: {
-    margin: "auto",
-    textAlign: "center",
-    maxWidth: "560px",
-    padding: "24px",
-    animation: "fadeIn 0.6s ease"
+  userMessage: {
+    backgroundColor: "#d1e7ff",
+    alignSelf: "flex-end",
+    marginLeft: "auto"
   },
-
-  emptyTitle: {
-    fontSize: "32px",
-    fontWeight: "700",
-    marginBottom: "14px",
-    background: "linear-gradient(90deg, #60a5fa, #a78bfa)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent"
+  aiMessage: {
+    backgroundColor: "#eaeaea",
+    alignSelf: "flex-start",
+    marginRight: "auto"
   },
-
-  emptySubtitle: {
-    fontSize: "17px",
-    marginBottom: "22px",
-    color: "#d1d5db",
-    lineHeight: "1.6"
-  },
-
-  emptyList: {
-    listStyle: "none",
-    padding: 0,
-    marginBottom: "24px",
-    lineHeight: "2",
-    fontSize: "16px",
-    color: "#e5e7eb"
-  },
-
-  emptyFooter: {
-    fontSize: "15px",
-    color: "#9ca3af",
-    lineHeight: "1.6"
-  },
-
-  inputWrapper: {
-    width: "100%",
+  inputArea: {
     display: "flex",
-    justifyContent: "center",
-    padding: "18px",
-    backgroundColor: "#1b1b1b"
+    padding: "10px",
+    borderTop: "1px solid #ddd",
+    backgroundColor: "#fff"
   },
-
-  inputContainer: {
-    width: "1300px",
-    display: "flex",
-    alignItems: "flex-end",
-    backgroundColor: "#242424",
-    borderRadius: "24px",
-    padding: "10px 14px",
-    border: "1px solid #333"
-  },
-
   input: {
     flex: 1,
-    background: "transparent",
-    border: "none",
-    outline: "none",
-    color: "#eaeaea",
-    padding: "14px 16px",
-    fontSize: "16px",
-    resize: "none",
-    minHeight: "48px",
-    maxHeight: "160px",
-    overflowY: "auto"
+    padding: "10px",
+    borderRadius: "8px",
+    border: "1px solid #ccc",
+    resize: "none"
   },
-
-  sendBtn: {
-    backgroundColor: "#2563eb",
-    border: "none",
-    color: "#fff",
-    borderRadius: "50%",
-    width: "44px",
-    height: "44px",
+  sendButton: {
+    marginLeft: "10px",
+    padding: "10px 20px",
+    borderRadius: "8px",
     cursor: "pointer",
-    fontSize: "18px"
+    backgroundColor: "#4f46e5",
+    color: "#fff",
+    border: "none"
   }
 };
 
